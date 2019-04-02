@@ -23,7 +23,9 @@ if (($UsersTable).Count -eq 0)
 }
 
 $FinalReport = New-Object 'System.Collections.Generic.List[System.Object]'
-$FinalReport.Add($(Get-HTMLOpenPage -TitleText "AD Users Report"))
+#Change CSS Template to FakeCompany template in C:\Program Files\WindowsPowerShell\Modules\ReportHTML\1.4.1.2, changed background color to #4E89C6
+#LeftLogo is now complogo.png
+$FinalReport.Add($(Get-HTMLOpenPage -CSSName "FakeCompany" -TitleText "AD Users Report" -LeftLogoString "C:\complogo.png"))
 	$FinalReport.Add($(Get-HTMLContentOpen -HeaderText "Users"))
 		$FinalReport.Add($(Get-HTMLContentTable $UsersTable))
 	$FinalReport.Add($(Get-HTMLContentClose))
