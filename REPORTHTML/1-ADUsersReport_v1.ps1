@@ -28,4 +28,4 @@ $FinalReport.Add($(Get-HTMLOpenPage -TitleText "AD Users Report"))
 		$FinalReport.Add($(Get-HTMLContentTable $UsersTable))
 	$FinalReport.Add($(Get-HTMLContentClose))
 $FinalReport.Add($(Get-HTMLClosePage))
-Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "AD Users Report" -ReportPath "C:\Automation\"
+Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "1-ADUsersReportv1" -ReportPath "C:\Scripts\Results\ReportHTML\"

@@ -9,7 +9,7 @@ $EnabledDisabledComputersTable = New-Object 'System.Collections.Generic.List[Sys
  
 
 #USERS
-Get-ADUser -Filter * -Properties * | ForEach-Object {
+Get-ADUser -Filter * -Properties * | Sort-Object Name | ForEach-Object {
 	If ($_.Enabled -eq $True)
 	{
 		$EnabledUsers++
@@ -56,7 +56,7 @@ $EnabledDisabledUsersTable.Add($obj)
 
 
 #COMPUTERS
-Get-ADComputer -Filter * -Properties * | ForEach-Object {
+Get-ADComputer -Filter * -Properties * | Sort-Object Name | ForEach-Object {
 	If ($_.Enabled -eq $True)
 	{
 		$EnabledComputers++
@@ -148,4 +148,4 @@ $FinalReport.Add($(Get-HTMLContentClose))
 
 $FinalReport.Add($(Get-HTMLClosePage))
 
-Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "AD Report" -ReportPath "C:\Automation\"
+Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "5-ADUsersandComputersReportv3DataTablePieChart" -ReportPath "C:\Scripts\Results\ReportHTML\"

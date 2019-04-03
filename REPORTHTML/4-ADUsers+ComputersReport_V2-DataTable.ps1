@@ -2,7 +2,7 @@
 $ComputersTable = New-Object 'System.Collections.Generic.List[System.Object]'
 
 #USERS
-Get-ADUser -Filter * -Properties * | ForEach-Object {
+Get-ADUser -Filter * -Properties * | Sort-Object Name | ForEach-Object {
 	$obj = [PSCustomObject]@{
 		
 		'Name' = $_.Name
@@ -24,7 +24,7 @@ if (($UsersTable).Count -eq 0)
 }
 
 #COMPUTERS
-Get-ADComputer -Filter * -Properties * | ForEach-Object {
+Get-ADComputer -Filter * -Properties * | Sort-Object Name| ForEach-Object {
 	$obj = [PSCustomObject]@{
 		
 		'Name' = $_.Name
@@ -50,11 +50,11 @@ $FinalReport = New-Object 'System.Collections.Generic.List[System.Object]'
 #LeftLogo is now complogo.png
 $FinalReport.Add($(Get-HTMLOpenPage -CSSName "FakeCompany" -TitleText "Active Directory Report" -LeftLogoString "C:\complogo.png"))
 	$FinalReport.Add($(Get-HTMLContentOpen -HeaderText "Users"))
-		$FinalReport.Add($(Get-HTMLContentTable $UsersTable))
+		$FinalReport.Add($(Get-HTMLContentDataTable -HideFooter $UsersTable))
 	$FinalReport.Add($(Get-HTMLContentClose))
 	$FinalReport.Add($(Get-HTMLContentOpen -HeaderText "Computers"))
-		$FinalReport.Add($(Get-HTMLContentTable $ComputersTable))
+		$FinalReport.Add($(Get-HTMLContentDataTable -HideFooter $ComputersTable))
 	$FinalReport.Add($(Get-HTMLContentClose))
 $FinalReport.Add($(Get-HTMLClosePage))
 
-Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "AD Report" -ReportPath "C:\Automation\"
+Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "4-ADUsersandComputersReportv2DataTable" -ReportPath "C:\Scripts\Results\ReportHTML\"

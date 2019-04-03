@@ -1,7 +1,7 @@
 ﻿$UsersTable = New-Object 'System.Collections.Generic.List[System.Object]'
 
 
-Get-ADUser -Filter * -Properties * | ForEach-Object {
+Get-ADUser -Filter * -Properties * | Sort-Object Name | ForEach-Object {
 	$obj = [PSCustomObject]@{
 		
 		'Name' = $_.Name
@@ -30,4 +30,4 @@ $FinalReport.Add($(Get-HTMLOpenPage -CSSName "FakeCompany" -TitleText "AD Users 
 		$FinalReport.Add($(Get-HTMLContentTable $UsersTable))
 	$FinalReport.Add($(Get-HTMLContentClose))
 $FinalReport.Add($(Get-HTMLClosePage))
-Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "AD Users Report" -ReportPath "C:\Automation\"
+Save-HTMLReport -ReportContent $FinalReport -ShowReport -ReportName "2-ADUsersReportv2" -ReportPath "C:\Scripts\Results\ReportHTML\"
