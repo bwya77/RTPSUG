@@ -1,85 +1,6 @@
-function Get-PSWordleDictionary {
-    Begin {
-        $Platform = [System.Environment]::OSVersion.Platform
-    }
-    Process {
-        if ($Platform -eq "Unix") {
-            #Get dictionary file
-            $dictionary = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/dictionary.txt"
-        }
-        #If we are on Windows
-        Else {
-            #Get dictionary file
-            $dictionary = Select-String "^[a-z]{5}$" "$PSScriptRoot\src\dictionary.txt"
-        }
-    }
-    End {
-        $dictionary
-    }
-}
-function New-PSWordleWord {
-    begin {
-        #Figure out what platform we're on
-        $Platform = [System.Environment]::OSVersion.Platform
-        #If we are on Unix
-        if ($Platform -eq "Unix") {
-            #Get 5 letter words from the files
-            $words = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/words.txt"   
-        }
-        #If we are on Windows
-        Else {
-            #Get 5 letter words from the files
-            $words = Select-String "^[a-z]{5}$" "$PSScriptRoot\src\words.txt"
-        }
-    }
-    process {
-        #Get a random word from the word list
-        Get-Random $Words
-    }
-}
-Function Get-MatchedItems {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [string]
-        $Guess,
-        [Parameter()]
-        [string]
-        $Word
-    )
-    Begin {
-        [array]$changechars = @()
-        [int]$count = -1
-        [string]$guessNew = ""
-    }
-    Process {
-        0..4 | ForEach-Object {
-            $count++
-            if ($guess[$_] -eq $word[$_]) {
-                $changechars += $count
-            }
-        }
-        [int]$count = -1
-        
-        $Guess.ToCharArray() | ForEach-Object {
-            $Count++
-            if ($count -in $changechars) {
-                $guessNew += $_
-            }
-            Else {
-                $guessNew += "*"
-            }
-        }
-    }
-    End {
-        $guessNew.toupper()
-    }
-}
 Function New-PSWordleGame {
     [CmdletBinding()]
     param (
-        [Parameter()]
-        [Switch]
         $HardMode,
         [Parameter()]
         [Switch]
@@ -100,6 +21,7 @@ Function New-PSWordleGame {
         [array]$guessedLetters = @()
         #Create a empty hashtable / dictionary that will hold letters that are NOT in the word
         [string[]]$notLetters = @()
+        #Keep a table of the points for each guess
             #region <start> New game prompt and directions
             "
  _  _   __  ____  ____  __    ____ 
@@ -217,7 +139,7 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
                     }
                     #If the letter is in the word, but not in the correct position, we have guessed the letter, but not the correct position
                     elseif ($guess[$pos] -in $word.Line.ToCharArray()) {
-                        # If the letter only appears once, and its in the $Matches string indicating that its in the correct spot, then any other instance of the letter is incorrect
+                        # If the letter appears once, and its in the $Matches string indicating that its in the correct spot, then any other instance of the letter is incorrect
                         if (($Appearances -eq 1) -and ($Matches.ToCharArray() -contains $guess[$pos])) {
                             if ($UseEmojiResponses) {
                                 Write-Host "⬛️" -NoNewLine; $shareImage = "⬛️" 

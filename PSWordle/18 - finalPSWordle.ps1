@@ -1,3 +1,92 @@
+function Get-PSWordleUpdate {
+    begin {
+        [string]$version = "0.0.8"
+        try { 
+            [string]$PublishedVersion = (Invoke-RestMethod "https://raw.githubusercontent.com/bwya77/PSModules/main/PSWordle/version.txt").Trim()
+        } 
+        catch {
+            $_.Exception.Response.StatusCode.Value__
+        }
+    }
+    Process {
+        if (($version -ne $PublishedVersion) -and ($PublishedVersion.count -gt 0)) {
+            [string]$Message = "A new version of PSWordle is available! 
+Current version: $version
+Published version: $PublishedVersion
+Please run Update-Module -Name PSwordle to grab the latest version.
+
+Note: You can hide the update message by including the -IgnoreUpdates parameter when starting a new game"
+        }
+    }
+    End {
+        $Message
+    }
+}
+function Set-ConfigItem {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $configItemName,
+        [Parameter()]
+        [string]
+        $configItemValue,
+        [Parameter()]
+        [string]
+        $configFile
+    )
+    begin {
+        if ([System.Environment]::OSVersion.Platform -eq "Unix") {
+            [string]$configFile = "$env:HOME\PSWordle\config.json"
+        }
+        Else {
+            [string]$configFile = "$env:APPDATA\PSWordle\config.json"
+        }
+    }
+    Process {
+        $myObject = [PSCustomObject]@{
+            $configItemName = $configItemValue
+        }
+        #export myObject to JSON
+        $myObject | ConvertTo-Json | Out-File $configFile -Force
+    }
+}
+function Get-ConfigFile {
+    Begin {
+        if ([System.Environment]::OSVersion.Platform -eq "Unix") {
+            [string]$configFile = "$env:HOME\PSWordle\config.json"
+        }
+        Else {
+            [string]$configFile = "$env:APPDATA\PSWordle\config.json"
+        }
+    }
+    Process {
+        if (-not(Test-Path -Path $configFile)) {
+            #New-Item -ItemType Directory -Path $configFile -Force | Out-Null
+            New-Item -ItemType File -Path $configFile -Force | Out-Null
+        }
+    }
+    End {
+        $configFile
+    }
+}
+function Get-ConfigItem {
+    param (
+        [Parameter()]
+        [string]
+        $configItem,
+        [Parameter()]
+        [string]
+        $configFile
+    )
+    Process {
+        #get the configured username
+        $userName = (Get-Content -Raw -Path $configFile -erroraction:SilentlyContinue | ConvertFrom-Json).$configItem
+    }
+    End {
+        $userName
+    }
+}
 function Get-PSWordleDictionary {
     Begin {
         $Platform = [System.Environment]::OSVersion.Platform
@@ -5,7 +94,7 @@ function Get-PSWordleDictionary {
     Process {
         if ($Platform -eq "Unix") {
             #Get dictionary file
-            $dictionary = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/dictionary.txt"
+            $dictionary = Select-String "^[a-z]{5}$" "$PSScriptRoot/src/dictionary.txt"
         }
         #If we are on Windows
         Else {
@@ -24,7 +113,7 @@ function New-PSWordleWord {
         #If we are on Unix
         if ($Platform -eq "Unix") {
             #Get 5 letter words from the files
-            $words = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/words.txt"   
+            $words = Select-String "^[a-z]{5}$" "$PSScriptRoot/src/words.txt"   
         }
         #If we are on Windows
         Else {
@@ -35,6 +124,158 @@ function New-PSWordleWord {
     process {
         #Get a random word from the word list
         Get-Random $Words
+    }
+}
+function New-PSWordleUser {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $userName
+    )
+    Begin {
+
+    }
+    Process {
+        While ($true) {
+            Write-Host "Checking online to see if that username is available"
+            $Check = Get-PSWordleLeaderboardUser -username $userName -Uri "https://funpswordle.azurewebsites.net/api/wordleleaderboard?code=LesznI7agk9vyt3pEu1YCb4ehbo4Mz1lQHewvRfgaw/FNOPXQMiSLg=="
+
+            # It's returning a string not a boolean so I need to format the IF statement this way
+            if ($Check -eq "True") {
+                Write-Host "That username is already taken! Please enter a new one." -ForegroundColor Yellow
+                $userName = Read-Host -Prompt "Please enter a new UserName "
+            }
+            else {
+                Write-Host "Success! Username is available" -ForegroundColor Green; break
+            }
+        }
+    }
+    End {
+        Set-ConfigItem -ConfigItemName username -ConfigItemValue $username
+        $userName
+    }
+}
+function Get-PSWordleLeaderBoard {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $Uri = "https://funpswordle.azurewebsites.net/api/wordleleaderboard?code=LesznI7agk9vyt3pEu1YCb4ehbo4Mz1lQHewvRfgaw/FNOPXQMiSLg=="
+    )
+    begin{
+        $Platform = [System.Environment]::OSVersion.Platform
+    }
+    process{
+        $Param = @{
+            Uri  = $Uri
+            Body = @{
+                "Request" = "Results"
+            }
+        }
+        $Results = Invoke-WebRequest @Param
+    }
+    end {
+        #Get the results back which come back as JSON, convert to a object
+        if ($Platform -eq "Unix") {
+            $Results.Content | ConvertFrom-Json | select-object PlayerTag, @{N="Score"; E={[int32]$_.Score}} | sort-object Score -Descending
+        }
+        Else
+        {
+            $data = $Results.Content | ConvertFrom-Json 
+            $data | select-object PlayerTag, @{N="Score"; E={[int32]$_.Score}} | sort-object Score -Descending
+        }
+    }
+}
+function Get-PSWordleLeaderboardUser {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]
+        $userName,
+        [Parameter(Mandatory)]
+        [string]
+        $Uri
+
+    )
+    begin
+    {
+        $Param = @{
+            Uri = $Uri
+            Body = @{
+                "Request"  = "CheckUser"
+                "Username" = $username
+            }
+        }
+    }
+    Process
+    {
+        $Results = Invoke-WebRequest @Param
+    }
+    End 
+    {
+        $Results.Content
+    }
+}
+function Set-PSWordleScore {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]
+        $User,
+        [Parameter(Mandatory)]
+        [int]
+        $Score,
+        [Parameter(Mandatory)]
+        [string]
+        $Uri
+    )
+    Begin {
+        $Param = @{
+            Uri  = $Uri
+            Body = @{
+                "Request"  = "CheckUser"
+                "Username" = $user
+            }
+        }
+        $Results = Invoke-WebRequest @Param 
+    }
+    Process {
+        #If our user is currently on the leaderboard we need to adjust the score
+        if ($Results.Content -eq 'True') {
+            $ModifiedDateTime = get-date -Format yyyyMMdd:HHmmss
+            $Param = @{
+                Uri   = $Uri
+                Body = @{
+                    "Request"          = "AddUser"
+                    "Username"         = $User
+                    "Score"            = $Score
+                    "ModifiedDateTime" = $ModifiedDateTime
+                    "IsPresent"        = "true"
+                }
+            }
+            $Results = Invoke-WebRequest @Param 
+        }
+        #if our user is not currently on the leaderboard, we can just add their score
+        else {
+            $CreatedDateTime = get-date -Format yyyyMMdd:HHmmss
+            $Param = @{
+                Uri = $Uri
+                Body = @{
+                    "Request"          = "AddUser"
+                    "Username"         = $User
+                    "Score"            = $Score
+                    "ModifiedDateTime" = $CreatedDateTime
+                    "CreatedDateTime"  = $CreatedDateTime
+                    "IsPresent"        = "false"
+                }
+            }
+            $Results = Invoke-WebRequest @Param 
+        }
+    }
+    End
+    {
+        $Results.Content
     }
 }
 Function Get-MatchedItems {
@@ -80,12 +321,38 @@ Function New-PSWordleGame {
     param (
         [Parameter()]
         [Switch]
+        $CompeteOnline,
+        [Parameter()]
+        [Switch]
         $HardMode,
+        [Parameter()]
+        [Switch]
+        $IgnoreUpdates,
         [Parameter()]
         [Switch]
         $UseEmojiResponses
     )
     Begin {
+        if (-not($IgnoreUpdates))
+        {
+            $Info = Get-PSWordleUpdate
+            if (-not([string]::IsNullOrWhiteSpace($info))) {
+                Write-Host $Info -ForegroundColor Yellow
+            }
+        }
+        #region <start> Username items
+        if ($CompeteOnline) {
+
+            #Get the config file, if none exists, the function will create it and return the path
+            $configFile = Get-ConfigFile
+            #Read the config file and extract the username
+            [string]$userName = Get-ConfigItem -ConfigItem username -ConfigFile $configFile
+            if ([string]::IsNullOrWhiteSpace($userName))
+            {
+                $userNameAttempt = Read-Host "Please enter a username you wish to use"
+                $userName = New-PSWordleUser -userName $userNameAttempt
+            }
+        }
         #Get a new random word
         $Word = New-PSWordleWord
         #Get Dictionary words
@@ -100,6 +367,15 @@ Function New-PSWordleGame {
         [array]$guessedLetters = @()
         #Create a empty hashtable / dictionary that will hold letters that are NOT in the word
         [string[]]$notLetters = @()
+        #Keep a table of the points for each guess
+        [hashtable]$pointlookup = @{
+            1 = 10
+            2 = 8
+            3 = 6
+            4 = 4
+            5 = 2
+            6 = 1
+        }
             #region <start> New game prompt and directions
             "
  _  _   __  ____  ____  __    ____ 
@@ -107,6 +383,19 @@ Function New-PSWordleGame {
 \ /\ /(  O ))   / ) D (/ (_/\ ) _) 
 (_/\_) \__/(__\_)(____/\____/(____)
                        "
+                       if ($CompeteOnline) {
+                           Write-Host -ForegroundColor Green "Welcome back: $username!"
+               "
+Get points based on how quickly you can guess the word!
+If you guess the word in the first try, you get 10 points.
+2nd try: 8 points
+3rd try: 6 points
+4th try: 4 points
+5th try: 2 points
+6th try: 1 point
+If you don't guess it at all you will lose 1 point.
+"
+                   }
                    if ($HardMode)
                    {
 "
@@ -217,7 +506,7 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
                     }
                     #If the letter is in the word, but not in the correct position, we have guessed the letter, but not the correct position
                     elseif ($guess[$pos] -in $word.Line.ToCharArray()) {
-                        # If the letter only appears once, and its in the $Matches string indicating that its in the correct spot, then any other instance of the letter is incorrect
+                        # If the letter appears once, and its in the $Matches string indicating that its in the correct spot, then any other instance of the letter is incorrect
                         if (($Appearances -eq 1) -and ($Matches.ToCharArray() -contains $guess[$pos])) {
                             if ($UseEmojiResponses) {
                                 Write-Host "⬛️" -NoNewLine; $shareImage = "⬛️" 
@@ -277,6 +566,24 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
         }
     }
     End {
+        If ($CompeteOnline) {
+            #using the hashtable, figure out how many points we get based on how quickly we guessed the word
+            if ($guessCount -eq 'X') {
+                $Points = -1
+            }
+            Else {
+                $points = $pointlookup[$guessCount] 
+            }
+            write-host " "
+            if ($Points -eq 1) {
+                Write-Host "You have earned $points point!" 
+            }
+            else {
+                Write-Host "You have earned $points points!" 
+            }
+            Write-Host "Adding your score to the leaderboard..."
+            Set-PSWordleScore -user $username -Score $points -uri "https://funpswordle.azurewebsites.net/api/wordleleaderboard?code=LesznI7agk9vyt3pEu1YCb4ehbo4Mz1lQHewvRfgaw/FNOPXQMiSLg=="
+        }
         #If we are running on PWSH or Windows PowerShell, if Windows PowerShell we cannot display emojis
         if ($PSVersionTable.PSEdition -eq "Core") {
             Write-Host "PSWORDLE $($word.LineNumber) $guessCount/6`r`n"

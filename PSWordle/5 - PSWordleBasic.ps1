@@ -76,15 +76,6 @@ Function Get-MatchedItems {
     }
 }
 Function New-PSWordleGame {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [Switch]
-        $HardMode,
-        [Parameter()]
-        [Switch]
-        $UseEmojiResponses
-    )
     Begin {
         #Get a new random word
         $Word = New-PSWordleWord
@@ -95,7 +86,6 @@ Function New-PSWordleGame {
         $wordleShare = "", "", "", "", "", "", ""
         #For hard mode, keep an array of correctly guessed letters
         [array]$correctLetters = @()
-        [hashtable]$correctLetterPlacement = @{}
         #Create a variable to hold the letters that have been guessed
         [array]$guessedLetters = @()
         #Create a empty hashtable / dictionary that will hold letters that are NOT in the word
@@ -107,12 +97,6 @@ Function New-PSWordleGame {
 \ /\ /(  O ))   / ) D (/ (_/\ ) _) 
 (_/\_) \__/(__\_)(____/\____/(____)
                        "
-                   if ($HardMode)
-                   {
-"
-Any revealed hints must be used in subsequent guesses. Green letters must remain in the correct position.
-"
-                   }
 "The WORDLE word is 5 characters long."
 Write-Host -ForegroundColor Green "GREEN" -NoNewline; Write-Host " means the letter is in the word and in the correct spot"
 Write-Host -ForegroundColor Yellow "YELLOW" -NoNewline; Write-Host " means the letter is in the word but in the wrong spot"
@@ -129,36 +113,6 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
             $guessedLetters = @()
             #Prompt the user for a guess
             [string]$guess = (Read-Host "($guessCount) Guess a 5-letter word").ToUpper()
-
-            if ($HardMode)
-            {
-                #For hard mode, if the guess does not contain correct previously guessed letters
-                if (($guess -notcontains $correctLetters) -and ($correctLetters.Count -gt 0))
-                {
-                    Do {
-                        #Iterate through the array and see if any letters are not in the guessed word
-                        if (($correctLetters| ForEach-Object{$guess.contains($_)}) -contains $false)
-                        {
-                            Write-Host "You must use all the correct letters from the previous guess" -ForegroundColor Red
-                            #Re-prompt the user for a guess
-                            $guess = (Read-Host "($guessCount) Guess a 5-letter word").ToUpper()
-                        }
-                    }
-                    Until (($correctLetters| ForEach-Object{$guess.contains($_)}) -notcontains $false)
-                }
-                #for hard mode, make sure the letters that were guesed in the correct position are still in the correct position
-                if ($correctLetterPlacement.count -gt 0)
-                {
-                    $correctLetterPlacement.GetEnumerator() | ForEach-Object {
-                        #Until all the letters are in the right spot
-                        While ($guess[$_.name] -ne $_.value) {
-                            Write-Host "Letters shown to be in the correct spot must remain in the correct spot" -ForegroundColor Red
-                            #Re-prompt the user for a guess
-                            $guess = (Read-Host "($guessCount) Guess a 5-letter word").ToUpper()
-                        }
-                    }
-                }
-            }
             
             #If you guess is the word, you win
             if ($guess -eq $word.Line) {
@@ -199,32 +153,14 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
                         #Add the letter to the correct letters array
                         $correctLetters += $guess[$pos]
 
-                        #Hard mode: Add correct letters and their placement in the hashtable
-                        if ($HardMode) {
-                            if ($correctLetterPlacement.Keys -notcontains $pos) {
-                                [string]$Key = $pos
-                                [string]$Value = $word.Line[$pos]
-                                #Add our guessed letter to the hashtable / dictionary
-                                $correctLetterPlacement.Add($Key, $Value)
-                            }
-                        }
-                        if ($UseEmojiResponses) {
-                            Write-Host "🟩" -NoNewLine; $shareImage = "🟩" 
-                        }
-                        else {
-                            Write-Host -ForegroundColor Green $guess[$pos] -NoNewLine; $shareImage = "🟩" 
-                        }
+ 
+                        Write-Host -ForegroundColor Green $guess[$pos] -NoNewLine; $shareImage = "🟩" 
                     }
                     #If the letter is in the word, but not in the correct position, we have guessed the letter, but not the correct position
                     elseif ($guess[$pos] -in $word.Line.ToCharArray()) {
                         # If the letter only appears once, and its in the $Matches string indicating that its in the correct spot, then any other instance of the letter is incorrect
                         if (($Appearances -eq 1) -and ($Matches.ToCharArray() -contains $guess[$pos])) {
-                            if ($UseEmojiResponses) {
-                                Write-Host "⬛️" -NoNewLine; $shareImage = "⬛️" 
-                            }
-                            else {
-                                Write-Host -ForegroundColor DarkGray $guess[$pos] -NoNewLine; $shareImage = "⬛️" 
-                            }
+                            Write-Host -ForegroundColor DarkGray $guess[$pos] -NoNewLine; $shareImage = "⬛️" 
                         }
                         # Get the letters from the guessed word up until the current letter and then see how many times the current character appears
                         # Then get the times the current letter appears in the word
@@ -232,31 +168,16 @@ Write-Host -ForegroundColor DarkGray "GRAY" -NoNewline; Write-Host " means the l
                         elseif(($guess[0..$pos] -eq $guess[$pos]).Count -le ($word.Line.ToCharArray() -eq $guess[$pos]).Count) {
                             #Add the letter to the correct letters array
                             $correctLetters += $guess[$pos]
-                            if ($UseEmojiResponses) {
-                                Write-Host "🟨"  -NoNewLine; $shareImage = "🟨" 
-                            }
-                            else {
-                                Write-Host -ForegroundColor Yellow $guess[$pos] -NoNewLine; $shareImage = "🟨" 
-                            }
+                            Write-Host -ForegroundColor Yellow $guess[$pos] -NoNewLine; $shareImage = "🟨" 
                         }
                         Else {
                             #Add the letter to the correct letters array
                             $correctLetters += $guess[$pos]
-                            if ($UseEmojiResponses) {
-                                Write-Host "⬛️" -NoNewLine; $shareImage = "⬛️" 
-                            }
-                            else {
-                                Write-Host -ForegroundColor DarkGray $guess[$pos] -NoNewLine; $shareImage = "⬛️" 
-                            }
+                            Write-Host -ForegroundColor DarkGray $guess[$pos] -NoNewLine; $shareImage = "⬛️" 
                         }
                     }
                     else {
-                        if ($UseEmojiResponses) {
-                            Write-Host "⬛️" -NoNewLine
-                        }
-                        else {
-                            Write-Host -ForegroundColor DarkGray $($guess[$pos]) -NoNewLine 
-                        }
+                        Write-Host -ForegroundColor DarkGray $($guess[$pos]) -NoNewLine 
                         if (-not($notLetters -contains $guess[$pos])) {
                             #Add our guessed letter to the array
                             $notLetters += $guess[$pos]
