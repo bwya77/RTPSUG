@@ -5,7 +5,7 @@ function Get-PSWordleDictionary {
     Process {
         if ($Platform -eq "Unix") {
             #Get dictionary file
-            $dictionary = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/.local/share/powershell/Modules/PSWordle/0.0.8/src/dictionary.txt"
+            $dictionary = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/dictionary.txt"
         }
         #If we are on Windows
         Else {
@@ -24,7 +24,7 @@ function New-PSWordleWord {
         #If we are on Unix
         if ($Platform -eq "Unix") {
             #Get 5 letter words from the files
-            $words = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/.local/share/powershell/Modules/PSWordle/0.0.8/src/words.txt"   
+            $words = Select-String "^[a-z]{5}$" "/Users/bradleywyatt/Documents/Git Repos/GitHub/RTPSUG/PSWordle/src/words.txt"   
         }
         #If we are on Windows
         Else {
